@@ -1,0 +1,162 @@
+
+
+.kas-wrap form {
+	background: #fff;
+	border-radius: 4px;
+	border: 1px solid #e4e9f2;
+	padding: 0;
+}
+
+.kas-wrap .kas-step {
+	padding: 2rem;
+	border-bottom: 1px solid #e4e9f2;
+}
+.kas-wrap p.submit {
+	margin: 0;
+	padding: 2rem;
+	border-top: 1px solid #e4e9f2;
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+}
+
+.kas-wrap p.submit .button-primary {
+	font-size: 1.05rem;
+    padding: .5rem 1.75rem;
+    font-weight: 600;
+    background: #00074c;
+    border-color: #00074c;
+}
+
+.kas-wrap .kas-step:last-of-type {
+	border-bottom: 0;
+}
+
+.kas-wrap .kas-step h2 {
+	margin: 0 0 .75rem;
+	font-size: 1.15rem;
+}
+
+.kas-wrap .kas-form-picker {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.kas-wrap .kas-form-picker select {
+	min-width: 280px;
+	max-width: 100%;
+}
+
+.kas-wrap select{
+	max-width: 100%;
+	padding-right: 1.75rem !important;
+}
+
+.kas-wrap select,
+.kas-wrap input[type="text"],
+.kas-wrap input[type="number"],
+.kas-wrap textarea {
+	min-height: 44px;
+	height: auto;
+	padding: 0 12px;
+	border: 1px solid #e4e4e7;
+	border-radius: 4px;
+	font-size: 1rem;
+	font-weight: 400;
+	color: #1d2327;
+	background-color: #fff;
+	outline: none;
+	box-shadow: none;
+	transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+
+.kas-wrap textarea {
+	min-height: 100px;
+	padding: 10px 12px;
+}
+
+.kas-wrap select:focus,
+.kas-wrap input[type="text"]:focus,
+.kas-wrap input[type="number"]:focus,
+.kas-wrap textarea:focus {
+	border-color: #00074c;
+	box-shadow: 0 0 0 1px rgba(0, 7, 76, 0.1);
+}
+
+.kas-wrap select:disabled,
+.kas-wrap input[type="text"]:disabled,
+.kas-wrap input[type="number"]:disabled,
+.kas-wrap textarea:disabled {
+	background-color: #f5f5f5;
+	border-color: #e4e4e7;
+	color: #646970;
+	cursor: not-allowed;
+}
+
+.kas-wrap .kas-form-status {
+	flex: 1 1 100%;
+	color: #1d2327;
+	font-size: 13px;
+}
+
+.kas-wrap .kas-form-status.is-error {
+	color: #b32d2e;
+}
+
+.kas-wrap .kas-mappings {
+	margin: 1rem 0;
+	border-collapse: collapse;
+}
+
+.kas-wrap .kas-mappings th,
+.kas-wrap .kas-mappings td {
+	padding: 10px 12px;
+	vertical-align: middle;
+}
+
+.kas-wrap .kas-mappings select,
+.kas-wrap .kas-mappings input[type="text"] {
+	width: 100%;
+	max-width: 280px;
+}
+
+.kas-wrap .kas-mappings .kas-field-id {
+	max-width: 320px;
+}
+
+.kas-wrap .kas-priority {
+	display: inline-block;
+	margin-left: 12px;
+}
+
+.kas-wrap .kas-priority input {
+	width: 70px;
+	margin-left: 6px;
+}
+
+.kas-wrap .kas-field-list {
+	margin: 0 0 1rem;
+	padding: 10px 14px;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	max-width: 720px;
+}
+
+.kas-wrap .kas-field-list summary {
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.kas-wrap .kas-field-list ul {
+	margin: 10px 0 0;
+	max-height: 220px;
+	overflow: auto;
+}
+
+.kas-wrap .kas-mapping-hint {
+	margin: 0 0 1rem;
+	color: #646970;
+}

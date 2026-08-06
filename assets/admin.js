@@ -1,0 +1,243 @@
+(function () {
+	var table = document.getElementById('kas-mappings');
+	var addBtn = document.getElementById('kas-add-mapping');
+	var template = document.getElementById('kas-mapping-template');
+	var formSelect = document.getElementById('kas_form_id');
+	var loadBtn = document.getElementById('kas-load-form');
+	var statusEl = document.getElementById('kas-form-status');
+	var stepMapping = document.getElementById('kas-step-mapping');
+	var mappingBody = document.getElementById('kas-mapping-body');
+	var mappingHint = document.getElementById('kas-mapping-hint');
+	var fieldList = document.getElementById('kas-field-list');
+	var fieldListUl = document.getElementById('kas-field-list-ul');
+
+	if (!table || !addBtn || !template || !formSelect || !loadBtn) {
+		return;
+	}
+
+	var tbody = table.querySelector('tbody');
+	var needsKey = { attribute: true, acf: true, meta: true };
+	var attributes = (window.kasAdmin && kasAdmin.attributes) || {};
+	var fields = (window.kasAdmin && kasAdmin.fields) || {};
+
+	function nextIndex() {
+		var max = -1;
+		tbody.querySelectorAll('.kas-mapping-row').forEach(function (row) {
+			var select = row.querySelector('.kas-source');
+			if (!select || !select.name) return;
+			var match = select.name.match(/\[mappings\]\[(\d+)\]/);
+			if (match) {
+				max = Math.max(max, parseInt(match[1], 10));
+			}
+		});
+		return max + 1;
+	}
+
+	function refreshSourceKey(row) {
+		var source = row.querySelector('.kas-source');
+		var keyCell = row.cells[1];
+		if (!source || !keyCell) return;
+
+		var type = source.value;
+		var name = source.name.replace('[source]', '[source_key]');
+		var current = '';
+		var existing = keyCell.querySelector('.kas-source-key');
+		if (existing) current = existing.value || '';
+
+		keyCell.innerHTML = '';
+
+		if (type === 'attribute' && Object.keys(attributes).length) {
+			var select = document.createElement('select');
+			select.name = name;
+			select.className = 'kas-source-key';
+
+			var empty = document.createElement('option');
+			empty.value = '';
+			empty.textContent = 'Velg attributt…';
+			select.appendChild(empty);
+
+			Object.keys(attributes).forEach(function (tax) {
+				var opt = document.createElement('option');
+				opt.value = tax;
+				opt.textContent = attributes[tax];
+				if (tax === current) opt.selected = true;
+				select.appendChild(opt);
+			});
+
+			keyCell.appendChild(select);
+			return;
+		}
+
+		var input = document.createElement('input');
+		input.type = 'text';
+		input.name = name;
+		input.className = 'kas-source-key regular-text';
+		input.value = needsKey[type] ? current : '';
+		input.disabled = !needsKey[type];
+		input.placeholder = needsKey[type] ? 'pa_materiale / felt_navn' : '—';
+		keyCell.appendChild(input);
+	}
+
+	function buildFieldSelect(name, selected) {
+		var select = document.createElement('select');
+		select.name = name;
+		select.className = 'kas-field-id';
+
+		var empty = document.createElement('option');
+		empty.value = '';
+		empty.textContent = 'Velg felt…';
+		select.appendChild(empty);
+
+		Object.keys(fields).forEach(function (fid) {
+			var opt = document.createElement('option');
+			opt.value = fid;
+			opt.textContent = fields[fid];
+			if (String(fid) === String(selected)) opt.selected = true;
+			select.appendChild(opt);
+		});
+
+		return select;
+	}
+
+	function refreshFieldId(row) {
+		var fieldCell = row.cells[2];
+		var source = row.querySelector('.kas-source');
+		if (!fieldCell || !source) return;
+
+		var name = source.name.replace('[source]', '[field_id]');
+		var current = '';
+		var existing = fieldCell.querySelector('.kas-field-id');
+		if (existing) current = existing.value || '';
+
+		fieldCell.innerHTML = '';
+
+		if (Object.keys(fields).length) {
+			fieldCell.appendChild(buildFieldSelect(name, current));
+			return;
+		}
+
+		var input = document.createElement('input');
+		input.type = 'text';
+		input.name = name;
+		input.className = 'kas-field-id small-text';
+		input.value = current;
+		input.placeholder = '1';
+		fieldCell.appendChild(input);
+	}
+
+	function refreshAllFieldIds() {
+		tbody.querySelectorAll('.kas-mapping-row').forEach(refreshFieldId);
+
+		if (template.content) {
+			var tplRow = template.content.querySelector('.kas-mapping-row');
+			if (tplRow) refreshFieldId(tplRow);
+		}
+	}
+
+	function updateFieldList() {
+		if (!fieldList || !fieldListUl) return;
+
+		fieldListUl.innerHTML = '';
+		Object.keys(fields).forEach(function (fid) {
+			var li = document.createElement('li');
+			var code = document.createElement('code');
+			code.textContent = fid;
+			li.appendChild(code);
+			li.appendChild(document.createTextNode(' – ' + fields[fid]));
+			fieldListUl.appendChild(li);
+		});
+
+		fieldList.hidden = !Object.keys(fields).length;
+	}
+
+	function setMappingReady(ready) {
+		if (stepMapping) stepMapping.classList.toggle('is-ready', ready);
+		if (mappingBody) mappingBody.hidden = !ready;
+		if (mappingHint) {
+			mappingHint.textContent = ready
+				? 'Koble produktdata til feltene i skjemaet.'
+				: 'Velg et skjema og trykk «Bruk dette skjema» for å laste feltene.';
+		}
+	}
+
+	function setStatus(message, isError) {
+		if (!statusEl) return;
+		statusEl.textContent = message || '';
+		statusEl.classList.toggle('is-error', !!isError);
+	}
+
+	function loadForm() {
+		var formId = formSelect.value;
+		if (!formId || formId === '0') {
+			setStatus('Velg et skjema først.', true);
+			return;
+		}
+
+		loadBtn.disabled = true;
+		setStatus('Laster skjema…');
+
+		var body = new FormData();
+		body.append('action', 'kas_load_form_fields');
+		body.append('nonce', kasAdmin.nonce);
+		body.append('form_id', formId);
+
+		fetch(kasAdmin.ajaxUrl, {
+			method: 'POST',
+			credentials: 'same-origin',
+			body: body
+		})
+			.then(function (res) { return res.json(); })
+			.then(function (json) {
+				loadBtn.disabled = false;
+
+				if (!json || !json.success) {
+					var msg = json && json.data && json.data.message ? json.data.message : 'Kunne ikke laste skjema.';
+					setStatus(msg, true);
+					return;
+				}
+
+				fields = json.data.fields || {};
+				updateFieldList();
+				refreshAllFieldIds();
+				setMappingReady(Object.keys(fields).length > 0);
+				setStatus('Skjema lastet. Map feltene under, og lagre når du er ferdig.');
+			})
+			.catch(function () {
+				loadBtn.disabled = false;
+				setStatus('Noe gikk galt. Prøv igjen.', true);
+			});
+	}
+
+	loadBtn.addEventListener('click', loadForm);
+
+	formSelect.addEventListener('change', function () {
+		setStatus('');
+	});
+
+	addBtn.addEventListener('click', function () {
+		var html = template.innerHTML.replace(/__INDEX__/g, String(nextIndex()));
+		var wrap = document.createElement('tbody');
+		wrap.innerHTML = html.trim();
+		var row = wrap.querySelector('tr');
+		if (row) {
+			tbody.appendChild(row);
+			refreshSourceKey(row);
+			refreshFieldId(row);
+		}
+	});
+
+	tbody.addEventListener('click', function (event) {
+		if (event.target.classList.contains('kas-remove-mapping')) {
+			var row = event.target.closest('tr');
+			if (row && tbody.querySelectorAll('.kas-mapping-row').length > 1) {
+				row.remove();
+			}
+		}
+	});
+
+	tbody.addEventListener('change', function (event) {
+		if (event.target.classList.contains('kas-source')) {
+			refreshSourceKey(event.target.closest('tr'));
+		}
+	});
+})();
