@@ -79,6 +79,23 @@ class KAS_Plugin {
 		$config   = wp_parse_args(is_array($config) ? $config : array(), $defaults);
 		$config['form_id'] = $form_id;
 
+		if (empty($config['title_mode']) || !in_array($config['title_mode'], array('custom', 'default', 'none'), true)) {
+			$config['title_mode'] = 'custom';
+		}
+		if (empty($config['description_mode']) || !in_array($config['description_mode'], array('custom', 'default', 'none'), true)) {
+			$config['description_mode'] = 'custom';
+		}
+
+		// Rydd gamle title/description ut av fri-tekst-attributter.
+		if (!empty($config['gf_atts'])) {
+			$config['gf_atts'] = self::sanitize_gf_atts($config['gf_atts']);
+			$config['gf_atts'] = preg_replace('/\b(title|description)\s*=\s*([\'"])(.*?)\2/i', '', $config['gf_atts']);
+			$config['gf_atts'] = trim(preg_replace('/\s+/', ' ', $config['gf_atts']));
+			if ($config['gf_atts'] === '') {
+				$config['gf_atts'] = self::default_gf_atts();
+			}
+		}
+
 		if (empty($config['mappings']) || !is_array($config['mappings'])) {
 			$config['mappings'] = self::default_mappings();
 		}
@@ -88,33 +105,51 @@ class KAS_Plugin {
 
 	public static function default_form_config($form_id = 0) {
 		return array(
-			'form_id'          => (int) $form_id,
-			'heading'          => 'Interessert i en lignende løsning?',
-			'intro'            => 'Feltene under er foreslått ut fra produktet du ser på. Juster dem gjerne før du sender inn.',
-			'auto_display'     => 1,
-			'display_hook'     => 'woocommerce_after_single_product_summary',
-			'display_priority' => 25,
-			'gf_atts'          => self::default_gf_atts(),
-			'mappings'         => self::default_mappings(),
+			'form_id'            => (int) $form_id,
+			'title_mode'         => 'custom',
+			'description_mode'   => 'custom',
+			'heading'            => 'Interessert i en lignende løsning?',
+			'intro'              => 'Feltene under er foreslått ut fra produktet du ser på. Juster dem gjerne før du sender inn.',
+			'auto_display'       => 1,
+			'display_hook'       => 'woocommerce_after_single_product_summary',
+			'display_priority'   => 25,
+			'gf_atts'            => self::default_gf_atts(),
+			'mappings'           => self::default_mappings(),
 		);
 	}
 
 	public static function default_gf_atts() {
-		return 'title="false" description="false" ajax="true"';
+		return 'ajax="true"';
 	}
 
-	public static function build_gf_shortcode($form_id, $atts = '') {
+	public static function build_gf_shortcode($form_id, $config = array()) {
 		$form_id = (int) $form_id;
-		$atts    = self::sanitize_gf_atts($atts);
-		if ($atts === '') {
-			$atts = self::default_gf_atts();
-		}
+		$config  = is_array($config) ? $config : array();
 
-		return '[gravityform id="' . $form_id . '" ' . $atts . ']';
+		$title_mode = isset($config['title_mode']) ? $config['title_mode'] : 'custom';
+		$desc_mode  = isset($config['description_mode']) ? $config['description_mode'] : 'custom';
+		$extra      = isset($config['gf_atts']) ? $config['gf_atts'] : self::default_gf_atts();
+		$extra      = self::sanitize_gf_atts($extra);
+
+		// title/description styres av egne valg, ikke fri tekst.
+		$extra = preg_replace('/\b(title|description)\s*=\s*([\'"])(.*?)\2/i', '', $extra);
+		$extra = preg_replace('/\s+/', ' ', trim($extra));
+
+		$title = ($title_mode === 'default') ? 'true' : 'false';
+		$desc  = ($desc_mode === 'default') ? 'true' : 'false';
+
+		$shortcode = '[gravityform id="' . $form_id . '" title="' . $title . '" description="' . $desc . '"';
+		if ($extra !== '') {
+			$shortcode .= ' ' . $extra;
+		}
+		$shortcode .= ']';
+
+		return $shortcode;
 	}
 
 	public static function sanitize_gf_atts($atts) {
 		$atts = is_string($atts) ? $atts : '';
+		$atts = wp_unslash($atts);
 		$atts = wp_strip_all_tags($atts);
 		$atts = html_entity_decode($atts, ENT_QUOTES, 'UTF-8');
 
@@ -123,6 +158,12 @@ class KAS_Plugin {
 		$atts = preg_replace('/\s+/', ' ', $atts);
 
 		return trim($atts);
+	}
+
+	public static function sanitize_display_mode($mode) {
+		$mode = sanitize_key($mode);
+		$allowed = array('custom', 'default', 'none');
+		return in_array($mode, $allowed, true) ? $mode : 'custom';
 	}
 
 	public static function get_form_config($form_id) {

@@ -283,4 +283,46 @@
 			refreshSourceKey(event.target.closest('tr'));
 		}
 	});
+
+	function syncModeFields() {
+		document.querySelectorAll('.kas-mode-select').forEach(function (select) {
+			var targetId = select.getAttribute('data-kas-target');
+			var target = targetId ? document.getElementById(targetId) : null;
+			if (!target) return;
+			target.hidden = select.value !== 'custom';
+		});
+	}
+
+	function updateGfPreview() {
+		var preview = document.getElementById('kas-gf-preview');
+		var titleSelect = document.getElementById('kas_title_mode');
+		var descSelect = document.getElementById('kas_description_mode');
+		var attsInput = document.getElementById('kas_gf_atts');
+		if (!preview || !titleSelect || !descSelect || !attsInput || !formIdInput) return;
+
+		var extra = (attsInput.value || '').replace(/\b(title|description)\s*=\s*(['"]).*?\2/gi, '');
+		extra = extra.replace(/\s+/g, ' ').trim();
+
+		var title = titleSelect.value === 'default' ? 'true' : 'false';
+		var desc = descSelect.value === 'default' ? 'true' : 'false';
+		var shortcode = '[gravityform id="' + formIdInput.value + '" title="' + title + '" description="' + desc + '"';
+		if (extra) shortcode += ' ' + extra;
+		shortcode += ']';
+		preview.textContent = shortcode;
+	}
+
+	document.querySelectorAll('.kas-mode-select').forEach(function (select) {
+		select.addEventListener('change', function () {
+			syncModeFields();
+			updateGfPreview();
+		});
+	});
+
+	var gfAtts = document.getElementById('kas_gf_atts');
+	if (gfAtts) {
+		gfAtts.addEventListener('input', updateGfPreview);
+	}
+
+	syncModeFields();
+	updateGfPreview();
 })();

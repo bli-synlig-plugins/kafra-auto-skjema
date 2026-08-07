@@ -187,8 +187,10 @@ class KAS_Settings {
 
 		return array(
 			'form_id'          => (int) $form_id,
-			'heading'          => isset($input['heading']) ? sanitize_text_field($input['heading']) : '',
-			'intro'            => isset($input['intro']) ? sanitize_textarea_field($input['intro']) : '',
+			'title_mode'       => isset($input['title_mode']) ? KAS_Plugin::sanitize_display_mode($input['title_mode']) : 'custom',
+			'description_mode' => isset($input['description_mode']) ? KAS_Plugin::sanitize_display_mode($input['description_mode']) : 'custom',
+			'heading'          => isset($input['heading']) ? sanitize_text_field(wp_unslash($input['heading'])) : '',
+			'intro'            => isset($input['intro']) ? sanitize_textarea_field(wp_unslash($input['intro'])) : '',
 			'auto_display'     => !empty($input['auto_display']) ? 1 : 0,
 			'display_hook'     => $hook,
 			'display_priority' => isset($input['display_priority']) ? absint($input['display_priority']) : 25,
@@ -408,15 +410,31 @@ class KAS_Settings {
 				<h2>1. Visning</h2>
 				<table class="form-table">
 					<tr>
-						<th scope="row"><label for="kas_heading">Overskrift</label></th>
+						<th scope="row"><label for="kas_title_mode">Overskrift</label></th>
 						<td>
-							<input type="text" class="regular-text" id="kas_heading" name="heading" value="<?php echo esc_attr($config['heading']); ?>">
+							<?php $title_mode = !empty($config['title_mode']) ? $config['title_mode'] : 'custom'; ?>
+							<select name="title_mode" id="kas_title_mode" class="kas-mode-select" data-kas-target="kas-title-custom">
+								<option value="custom" <?php selected($title_mode, 'custom'); ?>>Egendefinert</option>
+								<option value="default" <?php selected($title_mode, 'default'); ?>>Gravity Forms-standard</option>
+								<option value="none" <?php selected($title_mode, 'none'); ?>>Ingen</option>
+							</select>
+							<div class="kas-mode-custom" id="kas-title-custom" <?php echo $title_mode === 'custom' ? '' : 'hidden'; ?>>
+								<input type="text" class="regular-text" id="kas_heading" name="heading" value="<?php echo esc_attr($config['heading']); ?>" placeholder="Interessert i en lignende løsning?">
+							</div>
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="kas_intro">Beskrivelse</label></th>
+						<th scope="row"><label for="kas_description_mode">Beskrivelse</label></th>
 						<td>
-							<textarea class="large-text" rows="3" id="kas_intro" name="intro"><?php echo esc_textarea($config['intro']); ?></textarea>
+							<?php $desc_mode = !empty($config['description_mode']) ? $config['description_mode'] : 'custom'; ?>
+							<select name="description_mode" id="kas_description_mode" class="kas-mode-select" data-kas-target="kas-desc-custom">
+								<option value="custom" <?php selected($desc_mode, 'custom'); ?>>Egendefinert</option>
+								<option value="default" <?php selected($desc_mode, 'default'); ?>>Gravity Forms-standard</option>
+								<option value="none" <?php selected($desc_mode, 'none'); ?>>Ingen</option>
+							</select>
+							<div class="kas-mode-custom" id="kas-desc-custom" <?php echo $desc_mode === 'custom' ? '' : 'hidden'; ?>>
+								<textarea class="large-text" rows="3" id="kas_intro" name="intro" placeholder="Valgfri ingress…"><?php echo esc_textarea($config['intro']); ?></textarea>
+							</div>
 						</td>
 					</tr>
 					<tr>
@@ -444,26 +462,30 @@ class KAS_Settings {
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="kas_gf_atts">Gravity Forms shortcode</label></th>
+						<th scope="row"><label for="kas_gf_atts">Ekstra GF-attributter</label></th>
 						<td>
 							<?php
 							$gf_atts = !empty($config['gf_atts']) ? $config['gf_atts'] : KAS_Plugin::default_gf_atts();
+							$preview = KAS_Plugin::build_gf_shortcode($form_id, array_merge($config, array(
+								'title_mode'       => $title_mode,
+								'description_mode' => $desc_mode,
+								'gf_atts'          => $gf_atts,
+							)));
 							?>
-							<div class="kas-gf-shortcode" id="kas-gf-shortcode">
-								<code class="kas-gf-shortcode__prefix">[gravityform id="<?php echo esc_attr($form_id); ?>"</code>
-								<input
-									type="text"
-									class="regular-text kas-gf-atts"
-									id="kas_gf_atts"
-									name="gf_atts"
-									value="<?php echo esc_attr($gf_atts); ?>"
-									placeholder="<?php echo esc_attr(KAS_Plugin::default_gf_atts()); ?>"
-								>
-								<code class="kas-gf-shortcode__suffix">]</code>
-							</div>
+							<input
+								type="text"
+								class="regular-text"
+								id="kas_gf_atts"
+								name="gf_atts"
+								value="<?php echo esc_attr($gf_atts); ?>"
+								placeholder="<?php echo esc_attr(KAS_Plugin::default_gf_atts()); ?>"
+							>
 							<p class="description">
-								Vanlige attributter: <code>title="false"</code>, <code>description="false"</code>, <code>ajax="true"</code>, <code>tabindex="10"</code>.
-								<code>id</code> settes automatisk.
+								F.eks. <code>ajax="true"</code> eller <code>tabindex="10"</code>.
+								Title/description styres over.
+							</p>
+							<p class="description kas-gf-preview">
+								Shortcode: <code id="kas-gf-preview"><?php echo esc_html($preview); ?></code>
 							</p>
 						</td>
 					</tr>

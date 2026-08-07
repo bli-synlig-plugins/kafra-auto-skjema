@@ -59,22 +59,22 @@ class KAS_Frontend {
 
 		self::$rendered[$form_id] = true;
 
+		$title_mode = !empty($config['title_mode']) ? $config['title_mode'] : 'custom';
+		$desc_mode  = !empty($config['description_mode']) ? $config['description_mode'] : 'custom';
+
 		ob_start();
 		?>
 		<section class="kas-inquiry" id="kas-inquiry-<?php echo esc_attr($form_id); ?>">
-			<?php if (!empty($config['heading'])) : ?>
+			<?php if ($title_mode === 'custom' && !empty($config['heading'])) : ?>
 				<h2 class="kas-inquiry__heading"><?php echo esc_html($config['heading']); ?></h2>
 			<?php endif; ?>
 
-			<?php if (!empty($config['intro'])) : ?>
+			<?php if ($desc_mode === 'custom' && !empty($config['intro'])) : ?>
 				<p class="kas-inquiry__intro"><?php echo esc_html($config['intro']); ?></p>
 			<?php endif; ?>
 
 			<div class="kas-inquiry__form">
-				<?php
-				$gf_atts = !empty($config['gf_atts']) ? $config['gf_atts'] : KAS_Plugin::default_gf_atts();
-				echo do_shortcode(KAS_Plugin::build_gf_shortcode($form_id, $gf_atts));
-				?>
+				<?php echo do_shortcode(KAS_Plugin::build_gf_shortcode($form_id, $config)); ?>
 			</div>
 		</section>
 		<?php

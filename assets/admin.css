@@ -251,26 +251,17 @@
 	overflow: auto;
 }
 
-.kas-wrap .kas-gf-shortcode {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: .35rem;
-	max-width: 720px;
+.kas-wrap .kas-mode-custom {
+	margin-top: .75rem;
 }
 
-.kas-wrap .kas-gf-shortcode__prefix,
-.kas-wrap .kas-gf-shortcode__suffix {
+.kas-wrap .kas-gf-preview code {
+	display: inline-block;
+	margin-top: .25rem;
+	padding: .35rem .5rem;
 	background: #f7f9fc;
-	padding: .45rem .55rem;
 	border-radius: 4px;
-	white-space: nowrap;
-}
-
-.kas-wrap .kas-gf-atts {
-	flex: 1 1 240px;
-	min-width: 200px;
-	max-width: 100% !important;
+	word-break: break-word;
 }
 
 .kas-wrap .kas-edit-top {
