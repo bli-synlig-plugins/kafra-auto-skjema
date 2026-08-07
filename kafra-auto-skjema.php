@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Kafra Auto Skjema
  * Description: Fyller automatisk ut Gravity Forms-felter basert på WooCommerce-produktet man er inne på.
- * Version: 1.1.7
+ * Version: 1.1.8
  * Author: Benjamin
  * Text Domain: kafra-auto-skjema
  * Requires Plugins: woocommerce, gravityforms
@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('KAS_VERSION', '1.1.7');
+define('KAS_VERSION', '1.1.8');
 define('KAS_PLUGIN_FILE', __FILE__);
 define('KAS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('KAS_PLUGIN_URL', plugin_dir_url(__FILE__));

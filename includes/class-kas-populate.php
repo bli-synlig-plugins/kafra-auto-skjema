@@ -12,6 +12,7 @@ class KAS_Populate {
 		add_filter('gform_pre_submission_filter', array(__CLASS__, 'pre_render'));
 		add_filter('gform_admin_pre_render', array(__CLASS__, 'pre_render'));
 		add_filter('gform_field_content', array(__CLASS__, 'maybe_readonly_field'), 10, 5);
+		add_filter('gform_field_content', array(__CLASS__, 'maybe_force_checkbox_checked'), 20, 5);
 		add_filter('gform_field_choice_markup_pre_render', array(__CLASS__, 'maybe_check_choice_markup'), 10, 4);
 	}
 
@@ -42,9 +43,11 @@ class KAS_Populate {
 		}
 
 		foreach ($form['fields'] as &$field) {
-			$field_id = (string) $field->id;
+			$field_id   = (string) $field->id;
+			$input_type = self::field_input_type($field);
 
-			if ($field->type === 'checkbox') {
+			// checkbox + GF "Flervalg" (multi_choice) med flere valg.
+			if (self::is_multi_select_choice_field($field)) {
 				$raw = self::get_choice_source_value($field, $values);
 				if ($raw !== '') {
 					self::select_matching_choices($field, $raw);
@@ -53,7 +56,7 @@ class KAS_Populate {
 				continue;
 			}
 
-			if (!empty($field->inputs) && is_array($field->inputs)) {
+			if (!empty($field->inputs) && is_array($field->inputs) && $input_type !== 'radio') {
 				foreach ($field->inputs as $input) {
 					$input_id = (string) $input['id'];
 					if (isset($values[$input_id]) && $values[$input_id] !== '') {
@@ -65,7 +68,7 @@ class KAS_Populate {
 			if (isset($values[$field_id]) && $values[$field_id] !== '') {
 				$field->defaultValue = $values[$field_id];
 
-				if (in_array($field->type, array('select', 'radio'), true)) {
+				if (in_array($input_type, array('select', 'radio'), true)) {
 					self::select_matching_choices($field, $values[$field_id]);
 				}
 			}
@@ -118,20 +121,108 @@ class KAS_Populate {
 	}
 
 	public static function maybe_check_choice_markup($choice_markup, $choice, $field, $value) {
-		if (empty($choice['isSelected']) || empty($field->id) || empty($field->formId)) {
+		if (empty($choice['isSelected']) || empty($field->id)) {
 			return $choice_markup;
 		}
 
-		$key = (int) $field->formId . ':' . (string) $field->id;
+		$form_id = !empty($field->formId) ? (int) $field->formId : 0;
+		$key     = $form_id . ':' . (string) $field->id;
+
 		if (empty(self::$forced_checkbox_fields[$key])) {
-			return $choice_markup;
+			// Fallback if formId wasn't set on the field object yet.
+			$matched = false;
+			foreach (self::$forced_checkbox_fields as $stored_key => $flag) {
+				if (!$flag) {
+					continue;
+				}
+				if (substr((string) $stored_key, -1 * (strlen((string) $field->id) + 1)) === ':' . $field->id) {
+					$matched = true;
+					break;
+				}
+			}
+			if (!$matched) {
+				return $choice_markup;
+			}
 		}
 
-		if (preg_match('/\bchecked\s*=/i', $choice_markup)) {
+		if (preg_match('/\bchecked(\s*=|\s|>|\/)/i', $choice_markup)) {
 			return $choice_markup;
 		}
 
 		return preg_replace('/<input\b/i', '<input checked="checked"', $choice_markup, 1);
+	}
+
+	public static function maybe_force_checkbox_checked($content, $field, $value, $lead_id, $form_id) {
+		if (!self::is_multi_select_choice_field($field) || empty($field->id)) {
+			return $content;
+		}
+
+		$key = (int) $form_id . ':' . (string) $field->id;
+		if (empty(self::$forced_checkbox_fields[$key])) {
+			return $content;
+		}
+
+		if (empty($field->choices) || !is_array($field->choices)) {
+			return $content;
+		}
+
+		$needles = array();
+		foreach ($field->choices as $choice) {
+			if (empty($choice['isSelected'])) {
+				continue;
+			}
+			if (isset($choice['value']) && $choice['value'] !== '') {
+				$needles[] = (string) $choice['value'];
+			}
+			if (isset($choice['text']) && $choice['text'] !== '') {
+				$needles[] = (string) $choice['text'];
+			}
+		}
+
+		if (empty($needles)) {
+			return $content;
+		}
+
+		return preg_replace_callback(
+			'/<input\b([^>]*\btype=["\']checkbox["\'][^>]*)>/i',
+			function ($m) use ($needles) {
+				$tag = $m[0];
+
+				if (preg_match('/\bchecked(\s*=|\s|>|\/)/i', $tag) || preg_match('/\bgfield_choice_all_toggle\b/i', $tag)) {
+					return $tag;
+				}
+
+				if (!preg_match('/\bvalue=["\']([^"\']*)["\']/i', $tag, $vm)) {
+					return $tag;
+				}
+
+				$raw = html_entity_decode($vm[1], ENT_QUOTES, 'UTF-8');
+				$raw = trim(explode('|', $raw)[0]);
+
+				if (!self::choice_matches_needles($raw, $raw, $needles)) {
+					return $tag;
+				}
+
+				return preg_replace('/<input\b/i', '<input checked="checked"', $tag, 1);
+			},
+			$content
+		);
+	}
+
+	private static function field_input_type($field) {
+		if (is_object($field) && is_callable(array($field, 'get_input_type'))) {
+			return (string) $field->get_input_type();
+		}
+
+		return isset($field->type) ? (string) $field->type : '';
+	}
+
+	private static function is_multi_select_choice_field($field) {
+		// Classic Checkboxes, or Flervalg (multi_choice) with "multiple" → inputType checkbox.
+		$input_type = self::field_input_type($field);
+		$type       = isset($field->type) ? (string) $field->type : '';
+
+		return $input_type === 'checkbox' || $type === 'checkbox';
 	}
 
 	private static function get_locked_input_names_for_field($field, $locked_ids) {
@@ -367,7 +458,7 @@ class KAS_Populate {
 		$field->choices = $choices;
 
 		// Keep a readable default for exports/conditionals; checked state comes from isSelected + markup filter.
-		if ($field->type === 'checkbox' && $any_selected) {
+		if (self::is_multi_select_choice_field($field) && $any_selected) {
 			$selected_labels = array();
 			foreach ($choices as $choice) {
 				if (empty($choice['isSelected'])) {
