@@ -36,7 +36,6 @@ class KAS_Plugin {
 			'display_hook'     => 'woocommerce_after_single_product_summary',
 			'display_priority' => 25,
 			'mappings'         => array(),
-			'readonly_fields'  => 0,
 		);
 
 		$settings = get_option(KAS_OPTION_KEY, array());
@@ -60,30 +59,35 @@ class KAS_Plugin {
 				'source_key' => '',
 				'field_id'   => '',
 				'label'      => 'Produktnavn',
+				'locked'     => 0,
 			),
 			array(
 				'source'     => 'product_url',
 				'source_key' => '',
 				'field_id'   => '',
 				'label'      => 'Produktlenke',
+				'locked'     => 0,
 			),
 			array(
 				'source'     => 'attribute',
 				'source_key' => 'pa_mal',
 				'field_id'   => '',
 				'label'      => 'Mål',
+				'locked'     => 0,
 			),
 			array(
 				'source'     => 'attribute',
 				'source_key' => 'pa_materiale',
 				'field_id'   => '',
 				'label'      => 'Materiale',
+				'locked'     => 0,
 			),
 			array(
 				'source'     => 'attribute',
 				'source_key' => 'pa_bruksomrade',
 				'field_id'   => '',
 				'label'      => 'Bruksområde',
+				'locked'     => 0,
 			),
 		);
 	}

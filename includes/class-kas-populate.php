@@ -34,24 +34,41 @@ class KAS_Populate {
 			return $form;
 		}
 
+		$locked_ids = self::get_locked_field_ids($settings['mappings']);
+
 		foreach ($form['fields'] as &$field) {
 			$field_id = (string) $field->id;
+			$filled   = false;
+			$lock     = false;
 
 			if (!empty($field->inputs) && is_array($field->inputs)) {
 				foreach ($field->inputs as $input) {
 					$input_id = (string) $input['id'];
 					if (isset($values[$input_id]) && $values[$input_id] !== '') {
 						self::set_input_default($field, $input_id, $values[$input_id]);
+						$filled = true;
+						if (isset($locked_ids[$input_id])) {
+							$lock = true;
+						}
 					}
 				}
 			}
 
 			if (isset($values[$field_id]) && $values[$field_id] !== '') {
 				$field->defaultValue = $values[$field_id];
+				$filled = true;
 
 				if (in_array($field->type, array('select', 'radio'), true)) {
 					self::select_matching_choice($field, $values[$field_id]);
 				}
+
+				if (isset($locked_ids[$field_id])) {
+					$lock = true;
+				}
+			}
+
+			if ($filled && $lock) {
+				$field->cssClass = trim((isset($field->cssClass) ? $field->cssClass : '') . ' kas-locked');
 			}
 		}
 		unset($field);
@@ -62,45 +79,35 @@ class KAS_Populate {
 	public static function maybe_readonly_field($content, $field, $value, $lead_id, $form_id) {
 		$settings = KAS_Plugin::get_settings();
 
-		if (empty($settings['readonly_fields']) || (int) $form_id !== (int) $settings['form_id']) {
+		if ((int) $form_id !== (int) $settings['form_id']) {
 			return $content;
 		}
 
-		$mapped_ids = array();
-		foreach ($settings['mappings'] as $row) {
-			if (!empty($row['field_id'])) {
-				$mapped_ids[] = (string) $row['field_id'];
-			}
+		$css = isset($field->cssClass) ? $field->cssClass : '';
+		if (strpos($css, 'kas-locked') === false) {
+			return $content;
 		}
 
-		$field_id  = (string) $field->id;
-		$is_mapped = in_array($field_id, $mapped_ids, true);
-
-		if (!$is_mapped) {
-			foreach ($mapped_ids as $mapped_id) {
-				if (strpos($mapped_id, $field_id . '.') === 0) {
-					$is_mapped = true;
-					break;
+		$content = preg_replace_callback(
+			'/<input\b((?:[^>]*?\s)?type=["\'](?:text|email|url|tel|number)["\'][^>]*)>/i',
+			function ($m) {
+				if (preg_match('/\breadonly\b/i', $m[0])) {
+					return $m[0];
 				}
-			}
-		}
-
-		if (!$is_mapped || (string) $value === '') {
-			return $content;
-		}
-
-		$content = preg_replace(
-			'/<input\b(?![^>]*\breadonly\b)([^>]*type=["\'](?:text|email|url|tel|number|hidden)["\'][^>]*)>/i',
-			'<input$1 readonly="readonly">',
-			$content,
-			1
+				return '<input' . $m[1] . ' readonly="readonly">';
+			},
+			$content
 		);
 
-		$content = preg_replace(
-			'/<textarea\b(?![^>]*\breadonly\b)([^>]*)>/i',
-			'<textarea$1 readonly="readonly">',
-			$content,
-			1
+		$content = preg_replace_callback(
+			'/<textarea\b([^>]*)>/i',
+			function ($m) {
+				if (preg_match('/\breadonly\b/i', $m[0])) {
+					return $m[0];
+				}
+				return '<textarea' . $m[1] . ' readonly="readonly">';
+			},
+			$content
 		);
 
 		return $content;
@@ -125,6 +132,19 @@ class KAS_Populate {
 		}
 
 		return apply_filters('kas_mapped_values', $values, $product, $mappings);
+	}
+
+	private static function get_locked_field_ids($mappings) {
+		$locked = array();
+
+		foreach ((array) $mappings as $row) {
+			if (empty($row['locked']) || empty($row['field_id'])) {
+				continue;
+			}
+			$locked[(string) $row['field_id']] = true;
+		}
+
+		return $locked;
 	}
 
 	public static function resolve_source_value($product, $source, $source_key = '') {

@@ -20,6 +20,52 @@
 	align-items: center;
 }
 
+.kas-wrap .button-secondary,
+.kas-wrap .kas-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: .45rem;
+	background-color: #f7f9fc;
+	border-color: #e4e9f2;
+	color: #1a2238;
+	font-size: 1rem;
+	min-height: 44px;
+	padding: 0 1.2rem;
+	line-height: 1.2;
+	box-shadow: none;
+	&.kas-remove-mapping{
+		color: #e7000b;
+		border-color: #e7000b40;
+		font-weight: 600;
+		background-color: #e7000b0d;
+		&:hover{
+			background-color: #e7000b0d;
+			color: #e7000b;
+			border-color: #e7000b40;
+		}
+	}
+}
+
+.kas-wrap .button-secondary:hover,
+.kas-wrap .kas-btn:hover {
+	background-color: #e4e9f2;
+	border-color: #e4e9f2;
+	color: #1a2238;
+}
+
+.kas-wrap .kas-btn svg {
+	display: block;
+	flex-shrink: 0;
+	pointer-events: none;
+}
+
+.kas-wrap .kas-remove-mapping {
+	min-height: 36px;
+	padding: 0 .9rem;
+	font-size: .9rem;
+}
+
 .kas-wrap p.submit .button-primary {
 	font-size: 1.05rem;
     padding: .5rem 1.75rem;
@@ -124,6 +170,55 @@
 
 .kas-wrap .kas-mappings .kas-field-id {
 	max-width: 320px;
+}
+
+.kas-wrap .kas-col-lock {
+	width: 52px;
+}
+
+.kas-wrap .kas-lock-toggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	padding: 0;
+	border: 1px solid #e4e4e7;
+	border-radius: 4px;
+	background: #fff;
+	color: #646970;
+	cursor: pointer;
+	transition: border-color .15s ease, color .15s ease, background-color .15s ease;
+}
+
+.kas-wrap .kas-lock-toggle:hover {
+	border-color: #00074c;
+	color: #00074c;
+}
+
+.kas-wrap .kas-lock-toggle.is-locked {
+	border-color: #00074c;
+	background: #00074c;
+	color: #fff;
+}
+
+.kas-wrap .kas-lock-toggle .kas-lock-icon--closed,
+.kas-wrap .kas-lock-toggle .kas-lock-icon--open {
+	display: none !important;
+	line-height: 0;
+}
+
+.kas-wrap .kas-lock-toggle.is-locked .kas-lock-icon--closed {
+	display: inline-flex !important;
+}
+
+.kas-wrap .kas-lock-toggle:not(.is-locked) .kas-lock-icon--open {
+	display: inline-flex !important;
+}
+
+.kas-wrap .kas-lock-toggle svg {
+	display: block;
+	pointer-events: none;
 }
 
 .kas-wrap .kas-priority {

@@ -155,7 +155,7 @@
 		if (mappingBody) mappingBody.hidden = !ready;
 		if (mappingHint) {
 			mappingHint.textContent = ready
-				? 'Koble produktdata til feltene i skjemaet.'
+				? 'Koble produktdata til feltene i skjemaet. Bruk hengelåsen for å gjøre et felt skrivebeskyttet.'
 				: 'Velg et skjema og trykk «Bruk dette skjema» for å laste feltene.';
 		}
 	}
@@ -226,9 +226,54 @@
 		}
 	});
 
+	function findLockToggle(el) {
+		while (el && el !== tbody) {
+			if (el.classList && el.classList.contains('kas-lock-toggle')) {
+				return el;
+			}
+			el = el.parentNode;
+		}
+		return null;
+	}
+
+	function setLockState(btn, locked) {
+		var row = btn.closest ? btn.closest('tr') : null;
+		if (!row) {
+			row = btn.parentNode;
+			while (row && row.tagName !== 'TR') row = row.parentNode;
+		}
+		var input = row ? row.querySelector('.kas-locked-input') : null;
+		if (!input) return;
+
+		input.value = locked ? '1' : '0';
+		if (locked) {
+			btn.classList.add('is-locked');
+		} else {
+			btn.classList.remove('is-locked');
+		}
+		btn.setAttribute('aria-pressed', locked ? 'true' : 'false');
+		btn.title = locked ? 'Feltet er låst' : 'Feltet er åpent';
+	}
+
 	tbody.addEventListener('click', function (event) {
-		if (event.target.classList.contains('kas-remove-mapping')) {
-			var row = event.target.closest('tr');
+		var lockBtn = findLockToggle(event.target);
+		if (lockBtn) {
+			event.preventDefault();
+			event.stopPropagation();
+			setLockState(lockBtn, !lockBtn.classList.contains('is-locked'));
+			return;
+		}
+
+		var removeBtn = event.target.classList.contains('kas-remove-mapping')
+			? event.target
+			: (event.target.closest ? event.target.closest('.kas-remove-mapping') : null);
+
+		if (removeBtn) {
+			var row = removeBtn.closest ? removeBtn.closest('tr') : null;
+			if (!row) {
+				row = removeBtn.parentNode;
+				while (row && row.tagName !== 'TR') row = row.parentNode;
+			}
 			if (row && tbody.querySelectorAll('.kas-mapping-row').length > 1) {
 				row.remove();
 			}

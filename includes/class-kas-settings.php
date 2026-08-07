@@ -97,6 +97,7 @@ class KAS_Settings {
 					'source_key' => isset($row['source_key']) ? sanitize_text_field($row['source_key']) : '',
 					'field_id'   => $field_id,
 					'label'      => isset($row['label']) ? sanitize_text_field($row['label']) : '',
+					'locked'     => !empty($row['locked']) ? 1 : 0,
 				);
 			}
 		}
@@ -114,7 +115,6 @@ class KAS_Settings {
 			'display_hook'     => $hook,
 			'display_priority' => isset($input['display_priority']) ? absint($input['display_priority']) : 25,
 			'mappings'         => $mappings,
-			'readonly_fields'  => !empty($input['readonly_fields']) ? 1 : 0,
 		);
 	}
 
@@ -200,7 +200,10 @@ class KAS_Settings {
 								</option>
 							<?php endforeach; ?>
 						</select>
-						<button type="button" class="button button-secondary" id="kas-load-form">Bruk dette skjema</button>
+						<button type="button" class="button button-secondary kas-btn" id="kas-load-form">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M2 15h10"/><path d="m9 18 3-3-3-3"/></svg>
+							Bruk dette skjema
+						</button>
 						<span class="kas-form-status" id="kas-form-status" aria-live="polite"></span>
 					</div>
 				</div>
@@ -245,15 +248,6 @@ class KAS_Settings {
 								</label>
 							</td>
 						</tr>
-						<tr>
-							<th scope="row">Lås felter</th>
-							<td>
-								<label>
-									<input type="checkbox" name="<?php echo esc_attr($opt); ?>[readonly_fields]" value="1" <?php checked(!empty($settings['readonly_fields'])); ?>>
-									Gjør mappede felter skrivebeskyttet
-								</label>
-							</td>
-						</tr>
 					</table>
 				</div>
 
@@ -261,7 +255,7 @@ class KAS_Settings {
 					<h2>3. Feltmapping</h2>
 					<p class="kas-mapping-hint" id="kas-mapping-hint">
 						<?php echo $has_form
-							? 'Koble produktdata til feltene i skjemaet.'
+							? 'Koble produktdata til feltene i skjemaet. Bruk hengelåsen for å gjøre et felt skrivebeskyttet.'
 							: 'Velg et skjema og trykk «Bruk dette skjema» for å laste feltene.'; ?>
 					</p>
 
@@ -282,6 +276,7 @@ class KAS_Settings {
 									<th>Nøkkel / attributt</th>
 									<th>GF felt-ID</th>
 									<th>Notat</th>
+									<th class="kas-col-lock">Skrivebeskyttelse</th>
 									<th></th>
 								</tr>
 							</thead>
@@ -293,6 +288,7 @@ class KAS_Settings {
 										'source_key' => '',
 										'field_id'   => '',
 										'label'      => '',
+										'locked'     => 0,
 									);
 								}
 
@@ -304,7 +300,10 @@ class KAS_Settings {
 						</table>
 
 						<p>
-							<button type="button" class="button" id="kas-add-mapping">Legg til mapping</button>
+							<button type="button" class="button button-secondary kas-btn" id="kas-add-mapping">
+								<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+								Legg til mapping
+							</button>
 						</p>
 					</div>
 				</div>
@@ -316,6 +315,7 @@ class KAS_Settings {
 						'source_key' => '',
 						'field_id'   => '',
 						'label'      => '',
+						'locked'     => 0,
 					), $sources, $attributes, $form_fields);
 					?>
 				</template>
@@ -331,6 +331,7 @@ class KAS_Settings {
 		$source_key = isset($row['source_key']) ? $row['source_key'] : '';
 		$field_id   = isset($row['field_id']) ? $row['field_id'] : '';
 		$label      = isset($row['label']) ? $row['label'] : '';
+		$locked     = !empty($row['locked']);
 		$needs_key  = in_array($source, array('attribute', 'acf', 'meta'), true);
 		$name_base  = KAS_OPTION_KEY . '[mappings][' . $index . ']';
 		?>
@@ -369,8 +370,24 @@ class KAS_Settings {
 			<td>
 				<input type="text" name="<?php echo esc_attr($name_base); ?>[label]" class="regular-text" value="<?php echo esc_attr($label); ?>">
 			</td>
+			<td class="kas-col-lock">
+				<input type="hidden" name="<?php echo esc_attr($name_base); ?>[locked]" class="kas-locked-input" value="<?php echo $locked ? '1' : '0'; ?>">
+				<button
+					type="button"
+					class="kas-lock-toggle<?php echo $locked ? ' is-locked' : ''; ?>"
+					aria-pressed="<?php echo $locked ? 'true' : 'false'; ?>"
+					title="<?php echo $locked ? 'Feltet er låst' : 'Feltet er åpent'; ?>"
+				>
+					<span class="kas-lock-icon kas-lock-icon--closed" aria-hidden="true">
+						<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+					</span>
+					<span class="kas-lock-icon kas-lock-icon--open" aria-hidden="true">
+						<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+					</span>
+				</button>
+			</td>
 			<td>
-				<button type="button" class="button-link-delete kas-remove-mapping">Fjern</button>
+				<button type="button" class="button button-secondary kas-btn kas-remove-mapping">Fjern</button>
 			</td>
 		</tr>
 		<?php
