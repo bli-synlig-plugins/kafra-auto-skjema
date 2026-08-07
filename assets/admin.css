@@ -255,3 +255,170 @@
 	margin: 0 0 1rem;
 	color: #646970;
 }
+
+.kas-wrap .kas-edit-top {
+	margin: 0 0 .25rem;
+}
+
+.kas-wrap .kas-back {
+	display: inline-block;
+	margin-bottom: .35rem;
+	text-decoration: none;
+	color: #646970;
+}
+
+.kas-wrap .kas-back:hover {
+	color: #00074c;
+}
+
+.kas-wrap .page-title-action.kas-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: .35rem;
+	top: -.15rem;
+}
+
+.kas-wrap .kas-form-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 1rem;
+	margin-top: 1rem;
+}
+
+.kas-wrap .kas-empty,
+.kas-wrap .kas-panel {
+	margin-top: 1rem;
+	background: #fff;
+	border: 1px solid #e4e9f2;
+	border-radius: 4px;
+	padding: 2rem;
+}
+
+.kas-wrap .kas-subtitle {
+	margin: .5rem 0 1.25rem;
+	color: #646970;
+}
+
+.kas-wrap .kas-form-card {
+	display: flex;
+	flex-direction: column;
+	gap: .75rem;
+	padding: 1.25rem 1.35rem;
+	background: #fff;
+	border: 1px solid #e4e9f2;
+	border-radius: 4px;
+	text-decoration: none;
+	color: inherit;
+	transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease, color .15s ease;
+}
+
+.kas-wrap .kas-form-card:hover {
+	border-color: #00074c;
+	box-shadow: 0 0 0 1px rgba(0, 7, 76, 0.08);
+	color: inherit;
+}
+
+.kas-wrap .kas-form-card--add {
+	align-items: center;
+	justify-content: center;
+	min-height: 140px;
+	gap: .65rem;
+	background: transparent;
+	border: 2px dashed #c9d0dc;
+	color: #646970;
+	box-shadow: none;
+	font-weight: 600;
+}
+
+.kas-wrap .kas-form-card--add:hover {
+	border-color: #00074c;
+	color: #00074c;
+	background: #f7f9fc;
+	box-shadow: none;
+}
+
+.kas-wrap .kas-form-card--add svg {
+	display: block;
+	pointer-events: none;
+}
+
+.kas-wrap .kas-form-card__main {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: .75rem;
+}
+
+.kas-wrap .kas-form-card__title {
+	font-size: 1.05rem;
+}
+
+.kas-wrap .kas-form-card__meta,
+.kas-wrap .kas-form-card__meta-row {
+	color: #646970;
+	font-size: .9rem;
+}
+
+.kas-wrap .kas-form-card__meta-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .75rem;
+}
+
+.kas-wrap .kas-form-card__shortcode {
+	display: block;
+	padding: .45rem .6rem;
+	background: #f7f9fc;
+	border-radius: 4px;
+	font-size: .8rem;
+	overflow-wrap: anywhere;
+}
+
+.kas-wrap .kas-step-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: .75rem;
+}
+
+.kas-wrap .kas-step-head h2 {
+	margin: 0;
+}
+
+.kas-wrap .kas-submit-row {
+	margin: 0;
+	padding: 2rem;
+	border-top: 1px solid #e4e9f2;
+	display: flex;
+	justify-content: flex-end;
+}
+
+.kas-wrap form.kas-delete-form,
+.kas-wrap form.kas-add-form {
+	background: transparent;
+	border: 0;
+	padding: 0;
+	margin-top: 1rem;
+}
+
+.kas-wrap form.kas-add-form {
+	margin-top: 0;
+}
+
+.kas-wrap .kas-btn-danger {
+	color: #e7000b;
+	border-color: #e7000b40;
+	background-color: #e7000b0d;
+}
+
+.kas-wrap .kas-btn-danger:hover {
+	color: #e7000b;
+	border-color: #e7000b40;
+	background-color: #e7000b0d;
+}
+
+.kas-wrap .kas-add-form label {
+	display: block;
+	margin-bottom: .5rem;
+}

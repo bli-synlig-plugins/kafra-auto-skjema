@@ -4,30 +4,29 @@ if (!defined('ABSPATH')) exit;
 
 class KAS_Frontend {
 
-	private static $rendered = false;
+	private static $rendered = array();
 
 	public static function init() {
 		add_shortcode('kafra_produkt_skjema', array(__CLASS__, 'shortcode'));
-		add_action('wp', array(__CLASS__, 'maybe_register_display_hook'));
+		add_action('wp', array(__CLASS__, 'maybe_register_display_hooks'));
 		add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_styles'));
 	}
 
-	public static function maybe_register_display_hook() {
+	public static function maybe_register_display_hooks() {
 		if (!is_product()) return;
 
-		$settings = KAS_Plugin::get_settings();
-		if (empty($settings['auto_display']) || empty($settings['form_id'])) {
-			return;
+		foreach (KAS_Plugin::get_configured_forms() as $form_id => $config) {
+			if (empty($config['auto_display'])) {
+				continue;
+			}
+
+			$hook     = !empty($config['display_hook']) ? $config['display_hook'] : 'woocommerce_after_single_product_summary';
+			$priority = !empty($config['display_priority']) ? (int) $config['display_priority'] : 25;
+
+			add_action($hook, function () use ($form_id) {
+				echo self::render_form((int) $form_id);
+			}, $priority);
 		}
-
-		$hook     = !empty($settings['display_hook']) ? $settings['display_hook'] : 'woocommerce_after_single_product_summary';
-		$priority = !empty($settings['display_priority']) ? (int) $settings['display_priority'] : 25;
-
-		add_action($hook, array(__CLASS__, 'render_on_product'), $priority);
-	}
-
-	public static function render_on_product() {
-		echo self::render_form();
 	}
 
 	public static function shortcode($atts = array()) {
@@ -35,32 +34,41 @@ class KAS_Frontend {
 			'form_id' => 0,
 		), $atts, 'kafra_produkt_skjema');
 
-		return self::render_form((int) $atts['form_id']);
+		$form_id = (int) $atts['form_id'];
+		if (!$form_id) {
+			$forms = KAS_Plugin::get_configured_forms();
+			if (empty($forms)) {
+				return '';
+			}
+			$form_id = (int) key($forms);
+		}
+
+		return self::render_form($form_id);
 	}
 
 	public static function render_form($form_id = 0) {
-		$settings = KAS_Plugin::get_settings();
-		$form_id  = $form_id ? $form_id : (int) $settings['form_id'];
+		$form_id = (int) $form_id;
+		$config  = KAS_Plugin::get_form_config($form_id);
 
-		if (!$form_id || !function_exists('gravity_form')) {
+		if (!$config || !function_exists('gravity_form')) {
 			return '';
 		}
 
-		if (self::$rendered && !is_admin()) {
+		if (!is_admin() && isset(self::$rendered[$form_id])) {
 			return '';
 		}
 
-		self::$rendered = true;
+		self::$rendered[$form_id] = true;
 
 		ob_start();
 		?>
-		<section class="kas-inquiry" id="kas-inquiry">
-			<?php if (!empty($settings['heading'])) : ?>
-				<h2 class="kas-inquiry__heading"><?php echo esc_html($settings['heading']); ?></h2>
+		<section class="kas-inquiry" id="kas-inquiry-<?php echo esc_attr($form_id); ?>">
+			<?php if (!empty($config['heading'])) : ?>
+				<h2 class="kas-inquiry__heading"><?php echo esc_html($config['heading']); ?></h2>
 			<?php endif; ?>
 
-			<?php if (!empty($settings['intro'])) : ?>
-				<p class="kas-inquiry__intro"><?php echo esc_html($settings['intro']); ?></p>
+			<?php if (!empty($config['intro'])) : ?>
+				<p class="kas-inquiry__intro"><?php echo esc_html($config['intro']); ?></p>
 			<?php endif; ?>
 
 			<div class="kas-inquiry__form">
@@ -73,9 +81,7 @@ class KAS_Frontend {
 
 	public static function enqueue_styles() {
 		if (!is_product()) return;
-
-		$settings = KAS_Plugin::get_settings();
-		if (empty($settings['form_id'])) return;
+		if (empty(KAS_Plugin::get_configured_forms())) return;
 
 		wp_register_style('kas-frontend', false, array(), KAS_VERSION);
 		wp_enqueue_style('kas-frontend');

@@ -13,12 +13,16 @@ class KAS_Populate {
 	}
 
 	public static function pre_render($form) {
-		$settings = KAS_Plugin::get_settings();
-		$form_id  = (int) $settings['form_id'];
-
-		if (!$form_id || empty($form['id']) || (int) $form['id'] !== $form_id) {
+		if (empty($form['id'])) {
 			return $form;
 		}
+
+		$config = KAS_Plugin::get_form_config((int) $form['id']);
+		if (!$config) {
+			return $form;
+		}
+
+		$form_id = (int) $config['form_id'];
 
 		if (self::is_form_submitted($form_id)) {
 			return $form;
@@ -29,46 +33,29 @@ class KAS_Populate {
 			return $form;
 		}
 
-		$values = self::get_mapped_values($product, $settings['mappings']);
+		$values = self::get_mapped_values($product, $config['mappings']);
 		if (empty($values)) {
 			return $form;
 		}
 
-		$locked_ids = self::get_locked_field_ids($settings['mappings']);
-
 		foreach ($form['fields'] as &$field) {
 			$field_id = (string) $field->id;
-			$filled   = false;
-			$lock     = false;
 
 			if (!empty($field->inputs) && is_array($field->inputs)) {
 				foreach ($field->inputs as $input) {
 					$input_id = (string) $input['id'];
 					if (isset($values[$input_id]) && $values[$input_id] !== '') {
 						self::set_input_default($field, $input_id, $values[$input_id]);
-						$filled = true;
-						if (isset($locked_ids[$input_id])) {
-							$lock = true;
-						}
 					}
 				}
 			}
 
 			if (isset($values[$field_id]) && $values[$field_id] !== '') {
 				$field->defaultValue = $values[$field_id];
-				$filled = true;
 
 				if (in_array($field->type, array('select', 'radio'), true)) {
 					self::select_matching_choice($field, $values[$field_id]);
 				}
-
-				if (isset($locked_ids[$field_id])) {
-					$lock = true;
-				}
-			}
-
-			if ($filled && $lock) {
-				$field->cssClass = trim((isset($field->cssClass) ? $field->cssClass : '') . ' kas-locked');
 			}
 		}
 		unset($field);
@@ -77,40 +64,83 @@ class KAS_Populate {
 	}
 
 	public static function maybe_readonly_field($content, $field, $value, $lead_id, $form_id) {
-		$settings = KAS_Plugin::get_settings();
-
-		if ((int) $form_id !== (int) $settings['form_id']) {
+		$config = KAS_Plugin::get_form_config((int) $form_id);
+		if (!$config) {
 			return $content;
 		}
 
-		$css = isset($field->cssClass) ? $field->cssClass : '';
-		if (strpos($css, 'kas-locked') === false) {
+		$locked_ids = self::get_locked_field_ids($config['mappings']);
+		if (empty($locked_ids)) {
 			return $content;
 		}
 
-		$content = preg_replace_callback(
-			'/<input\b((?:[^>]*?\s)?type=["\'](?:text|email|url|tel|number)["\'][^>]*)>/i',
-			function ($m) {
-				if (preg_match('/\breadonly\b/i', $m[0])) {
-					return $m[0];
-				}
-				return '<input' . $m[1] . ' readonly="readonly">';
-			},
-			$content
-		);
+		$names = self::get_locked_input_names_for_field($field, $locked_ids);
+		if (empty($names)) {
+			return $content;
+		}
 
-		$content = preg_replace_callback(
-			'/<textarea\b([^>]*)>/i',
-			function ($m) {
-				if (preg_match('/\breadonly\b/i', $m[0])) {
-					return $m[0];
-				}
-				return '<textarea' . $m[1] . ' readonly="readonly">';
-			},
-			$content
-		);
+		foreach ($names as $name) {
+			$content = preg_replace_callback(
+				'/<(input|textarea)\b([^>]*\bname=["\']' . preg_quote($name, '/') . '["\'][^>]*)>/i',
+				function ($m) {
+					if (preg_match('/\breadonly\b/i', $m[0])) {
+						return $m[0];
+					}
+
+					if (
+						strtolower($m[1]) === 'input'
+						&& preg_match('/\btype=["\']/i', $m[0])
+						&& !preg_match('/\btype=["\'](?:text|email|url|tel|number|hidden)["\']/i', $m[0])
+					) {
+						return $m[0];
+					}
+
+					return '<' . $m[1] . $m[2] . ' readonly="readonly">';
+				},
+				$content,
+				1
+			);
+		}
 
 		return $content;
+	}
+
+	private static function get_locked_input_names_for_field($field, $locked_ids) {
+		$names = array();
+		$field_id = (string) $field->id;
+
+		// Parent field locked → lock the simple input and all visible sub-inputs.
+		if (isset($locked_ids[$field_id])) {
+			$names[] = 'input_' . $field_id;
+
+			if (!empty($field->inputs) && is_array($field->inputs)) {
+				foreach ($field->inputs as $input) {
+					if (empty($input['id']) || !empty($input['isHidden'])) {
+						continue;
+					}
+					// GF uses dots in name attributes: input_1.3, input_1.6
+					$names[] = 'input_' . $input['id'];
+				}
+			}
+		}
+
+		if (!empty($field->inputs) && is_array($field->inputs)) {
+			foreach ($field->inputs as $input) {
+				if (empty($input['id'])) {
+					continue;
+				}
+
+				$input_id = (string) $input['id'];
+				if (!isset($locked_ids[$input_id])) {
+					continue;
+				}
+
+				// Keep the dot — GF markup is name="input_1.6", not input_1_6.
+				$names[] = 'input_' . $input_id;
+			}
+		}
+
+		return array_values(array_unique($names));
 	}
 
 	public static function get_mapped_values($product, $mappings) {

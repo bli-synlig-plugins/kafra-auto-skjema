@@ -2,7 +2,7 @@
 	var table = document.getElementById('kas-mappings');
 	var addBtn = document.getElementById('kas-add-mapping');
 	var template = document.getElementById('kas-mapping-template');
-	var formSelect = document.getElementById('kas_form_id');
+	var formIdInput = document.getElementById('kas_form_id');
 	var loadBtn = document.getElementById('kas-load-form');
 	var statusEl = document.getElementById('kas-form-status');
 	var stepMapping = document.getElementById('kas-step-mapping');
@@ -11,7 +11,7 @@
 	var fieldList = document.getElementById('kas-field-list');
 	var fieldListUl = document.getElementById('kas-field-list-ul');
 
-	if (!table || !addBtn || !template || !formSelect || !loadBtn) {
+	if (!table || !addBtn || !template || !formIdInput) {
 		return;
 	}
 
@@ -155,8 +155,8 @@
 		if (mappingBody) mappingBody.hidden = !ready;
 		if (mappingHint) {
 			mappingHint.textContent = ready
-				? 'Koble produktdata til feltene i skjemaet. Bruk hengelåsen for å gjøre et felt skrivebeskyttet.'
-				: 'Velg et skjema og trykk «Bruk dette skjema» for å laste feltene.';
+				? 'Koble produktdata til feltene i skjemaet. Bruk hengelåsen for skrivebeskyttelse.'
+				: 'Trykk «Last felter på nytt» for å hente feltene fra Gravity Forms.';
 		}
 	}
 
@@ -167,14 +167,14 @@
 	}
 
 	function loadForm() {
-		var formId = formSelect.value;
+		var formId = formIdInput.value;
 		if (!formId || formId === '0') {
-			setStatus('Velg et skjema først.', true);
+			setStatus('Mangler skjema-ID.', true);
 			return;
 		}
 
-		loadBtn.disabled = true;
-		setStatus('Laster skjema…');
+		if (loadBtn) loadBtn.disabled = true;
+		setStatus('Laster felter…');
 
 		var body = new FormData();
 		body.append('action', 'kas_load_form_fields');
@@ -188,7 +188,7 @@
 		})
 			.then(function (res) { return res.json(); })
 			.then(function (json) {
-				loadBtn.disabled = false;
+				if (loadBtn) loadBtn.disabled = false;
 
 				if (!json || !json.success) {
 					var msg = json && json.data && json.data.message ? json.data.message : 'Kunne ikke laste skjema.';
@@ -200,19 +200,17 @@
 				updateFieldList();
 				refreshAllFieldIds();
 				setMappingReady(Object.keys(fields).length > 0);
-				setStatus('Skjema lastet. Map feltene under, og lagre når du er ferdig.');
+				setStatus('Felter lastet.');
 			})
 			.catch(function () {
-				loadBtn.disabled = false;
+				if (loadBtn) loadBtn.disabled = false;
 				setStatus('Noe gikk galt. Prøv igjen.', true);
 			});
 	}
 
-	loadBtn.addEventListener('click', loadForm);
-
-	formSelect.addEventListener('change', function () {
-		setStatus('');
-	});
+	if (loadBtn) {
+		loadBtn.addEventListener('click', loadForm);
+	}
 
 	addBtn.addEventListener('click', function () {
 		var html = template.innerHTML.replace(/__INDEX__/g, String(nextIndex()));
