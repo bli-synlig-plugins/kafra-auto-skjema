@@ -25,7 +25,7 @@
 		tbody.querySelectorAll('.kas-mapping-row').forEach(function (row) {
 			var select = row.querySelector('.kas-source');
 			if (!select || !select.name) return;
-			var match = select.name.match(/\[mappings\]\[(\d+)\]/);
+			var match = select.name.match(/mappings\[(\d+)\]/);
 			if (match) {
 				max = Math.max(max, parseInt(match[1], 10));
 			}
