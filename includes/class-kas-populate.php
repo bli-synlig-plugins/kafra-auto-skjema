@@ -4,12 +4,15 @@ if (!defined('ABSPATH')) exit;
 
 class KAS_Populate {
 
+	private static $forced_checkbox_fields = array();
+
 	public static function init() {
 		add_filter('gform_pre_render', array(__CLASS__, 'pre_render'));
 		add_filter('gform_pre_validation', array(__CLASS__, 'pre_render'));
 		add_filter('gform_pre_submission_filter', array(__CLASS__, 'pre_render'));
 		add_filter('gform_admin_pre_render', array(__CLASS__, 'pre_render'));
 		add_filter('gform_field_content', array(__CLASS__, 'maybe_readonly_field'), 10, 5);
+		add_filter('gform_field_choice_markup_pre_render', array(__CLASS__, 'maybe_check_choice_markup'), 10, 4);
 	}
 
 	public static function pre_render($form) {
@@ -41,6 +44,15 @@ class KAS_Populate {
 		foreach ($form['fields'] as &$field) {
 			$field_id = (string) $field->id;
 
+			if ($field->type === 'checkbox') {
+				$raw = self::get_choice_source_value($field, $values);
+				if ($raw !== '') {
+					self::select_matching_choices($field, $raw);
+					self::$forced_checkbox_fields[(int) $form['id'] . ':' . $field_id] = true;
+				}
+				continue;
+			}
+
 			if (!empty($field->inputs) && is_array($field->inputs)) {
 				foreach ($field->inputs as $input) {
 					$input_id = (string) $input['id'];
@@ -54,7 +66,7 @@ class KAS_Populate {
 				$field->defaultValue = $values[$field_id];
 
 				if (in_array($field->type, array('select', 'radio'), true)) {
-					self::select_matching_choice($field, $values[$field_id]);
+					self::select_matching_choices($field, $values[$field_id]);
 				}
 			}
 		}
@@ -103,6 +115,23 @@ class KAS_Populate {
 		}
 
 		return $content;
+	}
+
+	public static function maybe_check_choice_markup($choice_markup, $choice, $field, $value) {
+		if (empty($choice['isSelected']) || empty($field->id) || empty($field->formId)) {
+			return $choice_markup;
+		}
+
+		$key = (int) $field->formId . ':' . (string) $field->id;
+		if (empty(self::$forced_checkbox_fields[$key])) {
+			return $choice_markup;
+		}
+
+		if (preg_match('/\bchecked\s*=/i', $choice_markup)) {
+			return $choice_markup;
+		}
+
+		return preg_replace('/<input\b/i', '<input checked="checked"', $choice_markup, 1);
 	}
 
 	private static function get_locked_input_names_for_field($field, $locked_ids) {
@@ -286,22 +315,104 @@ class KAS_Populate {
 		return is_scalar($value) ? (string) $value : '';
 	}
 
-	private static function select_matching_choice($field, $value) {
+	private static function get_choice_source_value($field, $values) {
+		$field_id = (string) $field->id;
+
+		if (isset($values[$field_id]) && $values[$field_id] !== '') {
+			return (string) $values[$field_id];
+		}
+
+		$parts = array();
+		if (!empty($field->inputs) && is_array($field->inputs)) {
+			foreach ($field->inputs as $input) {
+				if (empty($input['id'])) {
+					continue;
+				}
+				$input_id = (string) $input['id'];
+				if (isset($values[$input_id]) && $values[$input_id] !== '') {
+					$parts[] = (string) $values[$input_id];
+				}
+			}
+		}
+
+		return $parts ? implode(', ', $parts) : '';
+	}
+
+	private static function select_matching_choices($field, $value) {
 		if (empty($field->choices) || !is_array($field->choices)) {
 			return;
 		}
 
-		foreach ($field->choices as &$choice) {
-			$choice_value = isset($choice['value']) ? $choice['value'] : '';
-			$choice_text  = isset($choice['text']) ? $choice['text'] : '';
-
-			$choice['isSelected'] = (
-				(string) $choice_value === (string) $value
-				|| (string) $choice_text === (string) $value
-				|| strcasecmp((string) $choice_text, (string) $value) === 0
-			);
+		$needles = self::split_choice_values($value);
+		if (empty($needles)) {
+			return;
 		}
-		unset($choice);
+
+		$choices      = array();
+		$any_selected = false;
+
+		foreach ($field->choices as $choice) {
+			$choice_value = isset($choice['value']) ? (string) $choice['value'] : '';
+			$choice_text  = isset($choice['text']) ? (string) $choice['text'] : '';
+			$selected    = self::choice_matches_needles($choice_value, $choice_text, $needles);
+
+			$choice['isSelected'] = $selected;
+			$choices[] = $choice;
+
+			if ($selected) {
+				$any_selected = true;
+			}
+		}
+
+		$field->choices = $choices;
+
+		// Keep a readable default for exports/conditionals; checked state comes from isSelected + markup filter.
+		if ($field->type === 'checkbox' && $any_selected) {
+			$selected_labels = array();
+			foreach ($choices as $choice) {
+				if (empty($choice['isSelected'])) {
+					continue;
+				}
+				$selected_labels[] = isset($choice['value']) && $choice['value'] !== ''
+					? $choice['value']
+					: (isset($choice['text']) ? $choice['text'] : '');
+			}
+			$field->defaultValue = implode(', ', array_filter($selected_labels, 'strlen'));
+		}
+	}
+
+	private static function choice_matches_needles($choice_value, $choice_text, $needles) {
+		foreach ($needles as $needle) {
+			$needle = html_entity_decode(trim((string) $needle), ENT_QUOTES, 'UTF-8');
+			$cv     = html_entity_decode(trim((string) $choice_value), ENT_QUOTES, 'UTF-8');
+			$ct     = html_entity_decode(trim((string) $choice_text), ENT_QUOTES, 'UTF-8');
+
+			if (
+				$cv === $needle
+				|| $ct === $needle
+				|| strcasecmp($ct, $needle) === 0
+				|| strcasecmp($cv, $needle) === 0
+			) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private static function split_choice_values($value) {
+		if (is_array($value)) {
+			$parts = $value;
+		} else {
+			$parts = preg_split('/\s*,\s*/', (string) $value);
+		}
+
+		$parts = array_map('trim', $parts);
+		$parts = array_filter($parts, function ($part) {
+			return $part !== '';
+		});
+
+		return array_values($parts);
 	}
 
 	private static function set_input_default($field, $input_id, $value) {
