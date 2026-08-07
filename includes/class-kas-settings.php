@@ -192,6 +192,7 @@ class KAS_Settings {
 			'auto_display'     => !empty($input['auto_display']) ? 1 : 0,
 			'display_hook'     => $hook,
 			'display_priority' => isset($input['display_priority']) ? absint($input['display_priority']) : 25,
+			'gf_atts'          => isset($input['gf_atts']) ? KAS_Plugin::sanitize_gf_atts($input['gf_atts']) : KAS_Plugin::default_gf_atts(),
 			'mappings'         => $mappings,
 		);
 	}
@@ -440,6 +441,30 @@ class KAS_Settings {
 								Prioritet:
 								<input type="number" min="1" max="999" id="kas_display_priority" name="display_priority" value="<?php echo esc_attr($config['display_priority']); ?>">
 							</label>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="kas_gf_atts">Gravity Forms shortcode</label></th>
+						<td>
+							<?php
+							$gf_atts = !empty($config['gf_atts']) ? $config['gf_atts'] : KAS_Plugin::default_gf_atts();
+							?>
+							<div class="kas-gf-shortcode" id="kas-gf-shortcode">
+								<code class="kas-gf-shortcode__prefix">[gravityform id="<?php echo esc_attr($form_id); ?>"</code>
+								<input
+									type="text"
+									class="regular-text kas-gf-atts"
+									id="kas_gf_atts"
+									name="gf_atts"
+									value="<?php echo esc_attr($gf_atts); ?>"
+									placeholder="<?php echo esc_attr(KAS_Plugin::default_gf_atts()); ?>"
+								>
+								<code class="kas-gf-shortcode__suffix">]</code>
+							</div>
+							<p class="description">
+								Vanlige attributter: <code>title="false"</code>, <code>description="false"</code>, <code>ajax="true"</code>, <code>tabindex="10"</code>.
+								<code>id</code> settes automatisk.
+							</p>
 						</td>
 					</tr>
 				</table>

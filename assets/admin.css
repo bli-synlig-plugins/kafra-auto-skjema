@@ -251,9 +251,26 @@
 	overflow: auto;
 }
 
-.kas-wrap .kas-mapping-hint {
-	margin: 0 0 1rem;
-	color: #646970;
+.kas-wrap .kas-gf-shortcode {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: .35rem;
+	max-width: 720px;
+}
+
+.kas-wrap .kas-gf-shortcode__prefix,
+.kas-wrap .kas-gf-shortcode__suffix {
+	background: #f7f9fc;
+	padding: .45rem .55rem;
+	border-radius: 4px;
+	white-space: nowrap;
+}
+
+.kas-wrap .kas-gf-atts {
+	flex: 1 1 240px;
+	min-width: 200px;
+	max-width: 100% !important;
 }
 
 .kas-wrap .kas-edit-top {

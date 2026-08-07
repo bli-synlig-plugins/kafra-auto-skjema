@@ -94,8 +94,35 @@ class KAS_Plugin {
 			'auto_display'     => 1,
 			'display_hook'     => 'woocommerce_after_single_product_summary',
 			'display_priority' => 25,
+			'gf_atts'          => self::default_gf_atts(),
 			'mappings'         => self::default_mappings(),
 		);
+	}
+
+	public static function default_gf_atts() {
+		return 'title="false" description="false" ajax="true"';
+	}
+
+	public static function build_gf_shortcode($form_id, $atts = '') {
+		$form_id = (int) $form_id;
+		$atts    = self::sanitize_gf_atts($atts);
+		if ($atts === '') {
+			$atts = self::default_gf_atts();
+		}
+
+		return '[gravityform id="' . $form_id . '" ' . $atts . ']';
+	}
+
+	public static function sanitize_gf_atts($atts) {
+		$atts = is_string($atts) ? $atts : '';
+		$atts = wp_strip_all_tags($atts);
+		$atts = html_entity_decode($atts, ENT_QUOTES, 'UTF-8');
+
+		// id settes alltid fra valgt skjema.
+		$atts = preg_replace('/\bid\s*=\s*([\'"]?)\d+\1/i', '', $atts);
+		$atts = preg_replace('/\s+/', ' ', $atts);
+
+		return trim($atts);
 	}
 
 	public static function get_form_config($form_id) {
