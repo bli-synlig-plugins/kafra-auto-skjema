@@ -95,8 +95,45 @@ class KAS_Populate {
 		}
 
 		foreach ($names as $name) {
+			$quoted = preg_quote($name, '/');
+
+			// <select> ignorerer readonly — bruk disabled + hidden så verdien fortsatt sendes inn.
 			$content = preg_replace_callback(
-				'/<(input|textarea)\b([^>]*\bname=["\']' . preg_quote($name, '/') . '["\'][^>]*)>/i',
+				'/<select\b([^>]*\bname=["\']' . $quoted . '["\'][^>]*)>(.*?)<\/select>/is',
+				function ($m) use ($name) {
+					$attrs = $m[1];
+					$inner = $m[2];
+
+					if (!preg_match('/\bdisabled\b/i', $attrs)) {
+						$attrs .= ' disabled="disabled"';
+					}
+
+					$selected = '';
+					if (preg_match('/<option\b([^>]*\bselected\b[^>]*)>/i', $inner, $om)) {
+						if (preg_match('/\bvalue=["\']([^"\']*)["\']/i', $om[1], $vm)) {
+							$selected = html_entity_decode($vm[1], ENT_QUOTES, 'UTF-8');
+						} elseif (preg_match('/<option\b[^>]*\bselected\b[^>]*>(.*?)<\/option>/is', $inner, $tm)) {
+							$selected = trim(wp_strip_all_tags($tm[1]));
+						}
+					} elseif (preg_match('/<option\b([^>]*)>(.*?)<\/option>/is', $inner, $fm)) {
+						// Første option hvis ingen er markert selected.
+						if (preg_match('/\bvalue=["\']([^"\']*)["\']/i', $fm[1], $vm)) {
+							$selected = html_entity_decode($vm[1], ENT_QUOTES, 'UTF-8');
+						} else {
+							$selected = trim(wp_strip_all_tags($fm[2]));
+						}
+					}
+
+					$out = '<select' . $attrs . '>' . $inner . '</select>';
+					$out .= '<input type="hidden" name="' . esc_attr($name) . '" value="' . esc_attr($selected) . '">';
+					return $out;
+				},
+				$content,
+				1
+			);
+
+			$content = preg_replace_callback(
+				'/<(input|textarea)\b([^>]*\bname=["\']' . $quoted . '["\'][^>]*)>/i',
 				function ($m) {
 					if (preg_match('/\breadonly\b/i', $m[0])) {
 						return $m[0];
