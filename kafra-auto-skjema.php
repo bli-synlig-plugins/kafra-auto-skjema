@@ -1,6 +1,7 @@
 <?php
 /**
  * Plugin Name: Kafra Auto Skjema
+ * Plugin URI: https://wordpress-plugins-docs.vercel.app/plugins/kafra-auto-skjema
  * Description: Fyller automatisk ut Gravity Forms-felter basert på WooCommerce-produktet man er inne på.
  * Version: 1.1.8
  * Author: Benjamin
